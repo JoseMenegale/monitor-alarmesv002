@@ -9,7 +9,7 @@ estatico com a tabela de alarmes, pronto para ser publicado no GitHub Pages.
 import html
 import os
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import requests
 
@@ -17,6 +17,10 @@ BASE_URL = "https://portal.tools.hughes.com.br"
 PROXY_ENDPOINT = f"{BASE_URL}/api/datasources/proxy/uid/julbqzRSz"
 
 OUTPUT_FILE = "index.html"
+
+# Horario de Brasilia (Brasil nao usa horario de verao desde 2019, entao o
+# offset fixo -3 funciona o ano todo, sem depender de tzdata instalado)
+TZ_BRASIL = timezone(timedelta(hours=-3))
 
 CLIENTES = [
     "ABC da Construção", "AMBAR ENERGIA KU", "AMBAR ENERGIA _C",
@@ -91,7 +95,7 @@ def gerar_html(alarmes, atualizado_em):
         problem = html.escape(str(a.get("Problem", "")))
         try:
             ts = int(a.get("Time"))
-            tempo = datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y/%m/%d %H:%M:%S")
+            tempo = datetime.fromtimestamp(ts, tz=TZ_BRASIL).strftime("%Y/%m/%d %H:%M:%S")
         except Exception:
             tempo = html.escape(str(a.get("Time", "")))
         return (
@@ -128,7 +132,7 @@ def gerar_html(alarmes, atualizado_em):
 </head>
 <body>
 <h1>Alarmes - Todos os Clientes ({len(alarmes_ordenados)})</h1>
-<p class="atualizado">Atualizado em {atualizado_em} (UTC)</p>
+<p class="atualizado">Atualizado em {atualizado_em} (horário de Brasília)</p>
 <input type="text" id="filtro" placeholder="Filtrar (cliente, host, problema...)" onkeyup="filtrar()">
 <table id="tabela">
 <thead><tr><th>Cliente</th><th>Host</th><th>Name</th><th>Severity</th><th>Problem</th><th>Time</th></tr></thead>
@@ -165,7 +169,7 @@ def main():
 
     print(f"Total de alarmes agora: {len(todos_alarmes)}")
 
-    agora = datetime.now(tz=timezone.utc).strftime("%Y/%m/%d %H:%M:%S")
+    agora = datetime.now(tz=TZ_BRASIL).strftime("%Y/%m/%d %H:%M:%S")
     pagina = gerar_html(todos_alarmes, agora)
 
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
