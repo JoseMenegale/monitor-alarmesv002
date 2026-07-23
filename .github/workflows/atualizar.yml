@@ -1,0 +1,39 @@
+name: Atualizar dashboard de alarmes
+
+on:
+  schedule:
+    # Roda a cada 15 minutos (horario UTC)
+    - cron: "*/15 * * * *"
+  workflow_dispatch: {}   # permite rodar manualmente pela aba "Actions" no GitHub
+
+permissions:
+  contents: write
+
+jobs:
+  atualizar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependencias
+        run: pip install requests
+
+      - name: Coletar alarmes e gerar index.html
+        env:
+          PORTAL_USUARIO: ${{ secrets.PORTAL_USUARIO }}
+          PORTAL_SENHA: ${{ secrets.PORTAL_SENHA }}
+        run: python coletar_alarmes.py
+
+      - name: Publicar mudancas (commit + push)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git diff --staged --quiet || git commit -m "Atualiza alarmes ($(date -u +'%Y-%m-%d %H:%M UTC'))"
+          git push
